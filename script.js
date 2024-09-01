@@ -1,7 +1,8 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js';
-import { getAnalytics } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-analytics.js';
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
+import { getAnalytics } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_jN-BTI4QirVq5EsMlLhJinnx556B6Ck",
@@ -19,28 +20,199 @@ const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+function goToDeliveryInterface() {
+    // Redirect to the delivery interface page
+    window.location.href = 'delivery-interfacedelivery_interface.html';
+}
+
+
+
+function showDeliveryInterfaceButton() {
+    const dashboardContent = document.querySelector('.main-content');
+    dashboardContent.innerHTML = `
+        <h2>Welcome, Delivery Person!</h2>
+        <p>Click the button below to access your delivery interface:</p>
+        <button id="goToDeliveryInterfaceBtn" class="btn btn-primary">Go to Delivery Interface</button>
+    `;
+    
+    // Add event listener to the button
+    document.getElementById('goToDeliveryInterfaceBtn').addEventListener('click', window.goToDeliveryInterface);
+}
+
 function checkAuth() {
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    if (isLoggedIn) {
+    const userRole = sessionStorage.getItem('userRole');
+    console.log('Checking auth, isLoggedIn:', isLoggedIn, 'userRole:', userRole);
+    if (isLoggedIn === 'true') {
         document.getElementById('loginContainer').style.display = 'none';
         document.getElementById('appContainer').style.display = 'flex';
-        loadDashboard();
+        if (userRole === 'deliveryPerson') {
+            showDeliveryInterfaceButton();
+        } else {
+            loadDashboard();
+        }
     } else {
         document.getElementById('loginContainer').style.display = 'flex';
         document.getElementById('appContainer').style.display = 'none';
     }
 }
 
-function login(accessKey) {
+async function loadServices() {
+    const servicesGrid = document.getElementById('services-grid');
+    servicesGrid.innerHTML = '';
+
+    for (let i = 0; i < 8; i++) {
+        const shimmerCard = document.createElement('div');
+        shimmerCard.className = 'service-card loading';
+        shimmerCard.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
+        servicesGrid.appendChild(shimmerCard);
+    }
+
+    try {
+        const servicesSnapshot = await getDocs(collection(db, 'services'));
+        
+        servicesGrid.innerHTML = '';
+
+        servicesSnapshot.forEach(doc => {
+            const service = doc.data();
+            const serviceCard = createServiceCard(doc.id, service);
+            servicesGrid.appendChild(serviceCard);
+        });
+    } catch (error) {
+        console.error('Error loading services:', error);
+        servicesGrid.innerHTML = '<p>Error loading services</p>';
+    }
+}
+
+function createServiceCard(id, service) {
+    const card = document.createElement('div');
+    card.className = 'service-card';
+    card.innerHTML = `
+        <img src="${service.imageUrl}" alt="${service.name}" class="service-image">
+        <h4 class="service-name">${service.name}</h4>
+        <p class="service-price">${service.price}</p>
+        <p class="service-category">${service.category}</p>
+        <p class="service-rating">Rating: ${service.rating}</p>
+        <div class="service-actions">
+            <button onclick="editService('${id}')" class="btn btn-secondary btn-sm">Edit</button>
+            <button onclick="deleteService('${id}')" class="btn btn-danger btn-sm">Delete</button>
+        </div>
+    `;
+    return card;
+}
+
+function searchServices(query) {
+    const serviceCards = document.querySelectorAll('.service-card');
+    const lowerQuery = query.toLowerCase();
+    serviceCards.forEach(card => {
+        const serviceName = card.querySelector('.service-name').textContent.toLowerCase();
+        if (serviceName.includes(lowerQuery)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+async function editService(serviceId) {
+    try {
+        const serviceDoc = await getDoc(doc(db, 'services', serviceId));
+        const serviceData = serviceDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Service</h2>
+            <form id="editServiceForm">
+                <div class="form-group">
+                    <label for="editServiceName">Service Name</label>
+                    <input type="text" id="editServiceName" value="${serviceData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceDescription">Description</label>
+                    <textarea id="editServiceDescription" rows="3">${serviceData.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editServicePrice">Price</label>
+                    <input type="text" id="editServicePrice" value="${serviceData.price}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceCategory">Category</label>
+                    <input type="text" id="editServiceCategory" value="${serviceData.category}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceRating">Rating</label>
+                    <input type="number" id="editServiceRating" value="${serviceData.rating}" step="0.1" min="0" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceImageUrl">Image URL</label>
+                    <input type="url" id="editServiceImageUrl" value="${serviceData.imageUrl}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Service</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        // Handle form submission
+        document.getElementById('editServiceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedService = {
+                name: document.getElementById('editServiceName').value,
+                description: document.getElementById('editServiceDescription').value,
+                price: document.getElementById('editServicePrice').value,
+                category: document.getElementById('editServiceCategory').value,
+                rating: parseFloat(document.getElementById('editServiceRating').value),
+                imageUrl: document.getElementById('editServiceImageUrl').value
+            };
+            try {
+                await updateDoc(doc(db, 'services', serviceId), updatedService);
+                closeModal('dashboardModal');
+                loadServices();
+            } catch (error) {
+                console.error('Error updating service:', error);
+                alert('Error updating service');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading service details:', error);
+        alert('Error loading service details');
+    }
+}
+
+async function deleteService(serviceId) {
+    if (confirm('Are you sure you want to delete this service?')) {
+        try {
+            await deleteDoc(doc(db, 'services', serviceId));
+            loadServices();
+        } catch (error) {
+            console.error('Error deleting service:', error);
+            alert('Error deleting service');
+        }
+    }
+}
+
+function openAddServiceModal() {
+    const modal = document.getElementById('addServiceModal');
+    modal.style.display = 'block';
+}
+
+
+async function login(accessKey) {
+    console.log('Login attempt with key:', accessKey);
     if (accessKey === '159357') {
+        console.log('Correct access key entered');
+        // Remove the call to getUserRole
+        const userRole = 'admin'; // Set a default role or implement role logic here
         sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('userRole', userRole);
         checkAuth();
     } else {
+        console.log('Incorrect access key');
         document.getElementById('loginError').textContent = 'Invalid access key';
     }
 }
 
 function logout() {
+    console.log('Logging out');
     sessionStorage.removeItem('isLoggedIn');
     checkAuth();
 }
@@ -64,14 +236,11 @@ async function loadDashboard() {
         card.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
     });
 
-    const recentOrdersTable = document.querySelector('.recent-orders table tbody');
-    recentOrdersTable.innerHTML = '';
-    for (let i = 0; i < 5; i++) {
-        recentOrdersTable.innerHTML += '<tr class="loading"><td colspan="5"><div class="shimmer-wrapper"><div class="shimmer"></div></div></td></tr>';
-    }
+    const recentOrdersContainer = document.querySelector('.recent-orders');
+    recentOrdersContainer.innerHTML = '<h3>Recent Orders</h3><div class="order-list"><div class="shimmer-wrapper"><div class="shimmer"></div></div></div>';
 
     try {
-        const ordersSnapshot = await getDocs(collection(db, 'orders'));
+        const ordersSnapshot = await getDocs(query(collection(db, 'orders'), orderBy('created_at', 'desc'), limit(5)));
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const categoriesSnapshot = await getDocs(collection(db, 'categories'));
         const productsSnapshot = await getDocs(collection(db, 'products'));
@@ -79,7 +248,7 @@ async function loadDashboard() {
         const totalOrders = ordersSnapshot.size;
         let totalRevenue = 0;
         ordersSnapshot.forEach(doc => {
-            totalRevenue += doc.data().total;
+            totalRevenue += doc.data().total_amount;
         });
 
         const activeUsers = usersSnapshot.size;
@@ -93,55 +262,102 @@ async function loadDashboard() {
             `;
         });
 
-        const recentOrdersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(5));
-        const recentOrdersSnapshot = await getDocs(recentOrdersQuery);
-        recentOrdersTable.innerHTML = '';
-        recentOrdersSnapshot.forEach(doc => {
-            const order = doc.data();
-            const row = recentOrdersTable.insertRow();
-            row.innerHTML = `
-                <td>${doc.id}</td>
-                <td>${order.customerName}</td>
-                <td>$${order.total.toFixed(2)}</td>
-                <td>${order.status}</td>
-                <td>
-                    <button class="btn btn-secondary" onclick="editOrder('${doc.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteOrder('${doc.id}')">Delete</button>
-                </td>
+        const orderList = recentOrdersContainer.querySelector('.order-list');
+        orderList.innerHTML = '';
+
+        for (const orderDoc of ordersSnapshot.docs) {
+            const order = orderDoc.data();
+            const userDoc = await getDoc(doc(db, 'users', order.user_id));
+            const user = userDoc.data();
+
+            const orderCard = document.createElement('div');
+            orderCard.className = 'order-card';
+            orderCard.innerHTML = `
+                <div class="order-header">
+                    <span class="order-id">#${orderDoc.id}</span>
+                    <span class="order-date">${formatDate(order.created_at.toDate())}</span>
+                </div>
+                <div class="order-details">
+                    <div class="order-customer">
+                        <i class="fas fa-user"></i>
+                        <span>${user ? user.name : 'Unknown User'}</span>
+                    </div>
+                    <div class="order-total">
+                        <i class="fas fa-dollar-sign"></i>
+                        <span>$${order.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div class="order-status ${order.status.toLowerCase()}">
+                        <i class="fas fa-info-circle"></i>
+                        <span>${order.status}</span>
+                    </div>
+                </div>
+                <div class="order-items">
+                    ${order.items.slice(0, 3).map(item => `
+                        <div class="order-item">
+                            <span class="item-name">${item.product_name}</span>
+                            <span class="item-quantity">x${item.quantity}</span>
+                        </div>
+                    `).join('')}
+                    ${order.items.length > 3 ? `<div class="order-item">And ${order.items.length - 3} more items...</div>` : ''}
+                </div>
+                <div class="order-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails('${orderDoc.id}')">View Details</button>
+                    <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${orderDoc.id}')">Update Status</button>
+                </div>
             `;
-        });
+            orderList.appendChild(orderCard);
+        }
+
     } catch (error) {
         console.error('Error loading dashboard:', error);
         dashboardCards.forEach(card => {
             card.classList.remove('loading');
             card.innerHTML = '<p>Error loading data</p>';
         });
-        recentOrdersTable.innerHTML = '<tr><td colspan="5">Error loading recent orders</td></tr>';
+        recentOrdersContainer.innerHTML = '<p>Error loading recent orders</p>';
     }
 }
 
+function formatDate(date) {
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
 async function loadOrders() {
+    const ordersTableBody = document.querySelector('#orders-table tbody');
+    ordersTableBody.innerHTML = '<tr><td colspan="5"><div class="shimmer-wrapper"><div class="shimmer"></div></div></td></tr>';
+
     try {
-        const ordersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+        const ordersQuery = query(collection(db, 'orders'), orderBy('created_at', 'desc'));
         const ordersSnapshot = await getDocs(ordersQuery);
-        const tableBody = document.getElementById('orders-table').getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = '';
-        ordersSnapshot.forEach(doc => {
-            const order = doc.data();
-            const row = tableBody.insertRow();
+
+        ordersTableBody.innerHTML = '';
+        for (const orderDoc of ordersSnapshot.docs) {
+            const order = orderDoc.data();
+            const userDoc = await getDoc(doc(db, 'users', order.user_id));
+            const user = userDoc.data();
+
+            const row = ordersTableBody.insertRow();
             row.innerHTML = `
-                <td>${doc.id}</td>
-                <td>${order.customerName}</td>
-                <td>$${order.total.toFixed(2)}</td>
-                <td>${order.status}</td>
+                <td>${orderDoc.id}</td>
+                <td>${user ? user.name : 'Unknown User'}</td>
+                <td>$${order.total_amount.toFixed(2)}</td>
+                <td><span class="order-status ${order.status.toLowerCase()}">${order.status}</span></td>
                 <td>
-                    <button class="btn btn-secondary" onclick="editOrder('${doc.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteOrder('${doc.id}')">Delete</button>
+                    <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails('${orderDoc.id}')">View</button>
+                    <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${orderDoc.id}')">Update</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteOrder('${orderDoc.id}')">Delete</button>
                 </td>
             `;
-        });
+        }
     } catch (error) {
         console.error('Error loading orders:', error);
+        ordersTableBody.innerHTML = '<tr><td colspan="5">Error loading orders</td></tr>';
     }
 }
 
@@ -214,8 +430,8 @@ function createProductCard(id, product) {
         <p class="product-price">$${product.price.toFixed(2)}</p>
         <p class="product-category">${product.category}</p>
         <div class="product-actions">
-            <button onclick="editProduct('${id}')" class="btn btn-secondary">Edit</button>
-            <button onclick="deleteProduct('${id}')" class="btn btn-danger">Delete</button>
+            <button onclick="editProduct('${id}')" class="btn btn-secondary btn-sm">Edit</button>
+            <button onclick="deleteProduct('${id}')" class="btn btn-danger btn-sm">Delete</button>
         </div>
     `;
     return card;
@@ -251,26 +467,30 @@ function searchProducts(query) {
 }
 
 async function loadUsers() {
+    const usersTableBody = document.querySelector('#users-table tbody');
+    usersTableBody.innerHTML = '<tr><td colspan="5"><div class="shimmer-wrapper"><div class="shimmer"></div></div></td></tr>';
+
     try {
         const usersSnapshot = await getDocs(collection(db, 'users'));
-        const tableBody = document.getElementById('users-table').getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = '';
+        
+        usersTableBody.innerHTML = '';
         usersSnapshot.forEach(doc => {
             const user = doc.data();
-            const row = tableBody.insertRow();
+            const row = usersTableBody.insertRow();
             row.innerHTML = `
                 <td>${doc.id}</td>
                 <td>${user.name}</td>
                 <td>${user.email}</td>
                 <td>${user.role || 'User'}</td>
                 <td>
-                    <button class="btn btn-secondary" onclick="editUser('${doc.id}')">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteUser('${doc.id}')">Delete</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editUser('${doc.id}')">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${doc.id}')">Delete</button>
                 </td>
             `;
         });
     } catch (error) {
         console.error('Error loading users:', error);
+        usersTableBody.innerHTML = '<tr><td colspan="5">Error loading users</td></tr>';
     }
 }
 
@@ -306,20 +526,22 @@ async function loadAnalytics() {
         });
     } catch (error) {
         console.error('Error loading analytics:', error);
+        document.getElementById('chart-container').innerHTML = '<p>Error loading analytics data</p>';
     }
 }
 
 async function loadSettings() {
     try {
-        const settingsDoc = await getDocs(doc(db, 'settings', 'app_settings'));
+        const settingsDoc = await getDoc(doc(db, 'settings', 'app_settings'));
         if (settingsDoc.exists()) {
             const settings = settingsDoc.data();
-            document.getElementById('site-name').value = settings.siteName;
-            document.getElementById('contact-email').value = settings.contactEmail;
-            document.getElementById('currency').value = settings.currency;
+            document.getElementById('site-name').value = settings.siteName || '';
+            document.getElementById('contact-email').value = settings.contactEmail || '';
+            document.getElementById('currency').value = settings.currency || 'USD';
         }
     } catch (error) {
         console.error('Error loading settings:', error);
+        alert('Error loading settings');
     }
 }
 
@@ -351,20 +573,119 @@ async function loadCategoriesForProductForm() {
     }
 }
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.style.display = 'none';
+async function viewOrderDetails(orderId) {
+    try {
+        const orderDoc = await getDoc(doc(db, 'orders', orderId));
+        const orderData = orderDoc.data();
+        const userDoc = await getDoc(doc(db, 'users', orderData.user_id));
+        const userData = userDoc.data();
+        
+        const modalContent = `
+            <h2>Order Details</h2>
+            <div class="order-details-grid">
+                <div class="order-details-item">
+                    <h4>Order Information</h4>
+                    <p><strong>Order ID:</strong> ${orderId}</p>
+                    <p><strong>Date:</strong> ${formatDate(orderData.created_at.toDate())}</p>
+                    <p><strong>Status:</strong> ${orderData.status}</p>
+                    <p><strong>Total Amount:</strong> $${orderData.total_amount.toFixed(2)}</p>
+                </div>
+                <div class="order-details-item">
+                    <h4>Customer Information</h4>
+                    <p><strong>Name:</strong> ${userData ? userData.name : 'Unknown'}</p>
+                    <p><strong>Email:</strong> ${userData ? userData.email : 'Unknown'}</p>
+                    <p><strong>Phone:</strong> ${orderData.phone_number}</p>
+                    <p><strong>Address:</strong> ${orderData.address}</p>
+                </div>
+            </div>
+            <div class="order-details-item">
+                <h4>Order Items</h4>
+                <ul class="order-items-list">
+                    ${orderData.items.map(item => `
+                        <li>
+                            <img src="${item.image_url || '/placeholder-image.jpg'}" alt="${item.product_name}" class="order-item-image">
+                            <div class="order-item-details">
+                                <span class="order-item-name">${item.product_name}</span>
+                                <span class="order-item-quantity">Quantity: ${item.quantity}</span>
+                                <span class="order-item-price">$${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+            <div class="order-summary">
+                <h4>Order Summary</h4>
+                <div class="order-summary-item">
+                    <span>Subtotal:</span>
+                    <span>$${orderData.total_amount.toFixed(2)}</span>
+                </div>
+                <div class="order-summary-item">
+                    <span>Delivery Fee:</span>
+                    <span>$${orderData.delivery_fee ? orderData.delivery_fee.toFixed(2) : '0.00'}</span>
+                </div>
+                <div class="order-total">
+                    <span>Total:</span>
+                    <span>$${(orderData.total_amount + (orderData.delivery_fee || 0)).toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+        
+        showModal(modalContent, 'orderDetailsModal');
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        alert('Error fetching order details');
+    }
 }
 
-async function editOrder(id) {
-    console.log(`Edit order ${id}`);
+async function updateOrderStatus(orderId) {
+    try {
+        const orderDoc = await getDoc(doc(db, 'orders', orderId));
+        const currentStatus = orderDoc.data().status;
+        
+        const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+        const statusSelect = statusOptions.map(status => 
+            `<option value="${status}" ${status === currentStatus ? 'selected' : ''}>${status}</option>`
+        ).join('');
+        
+        const modalContent = `
+            <h2>Update Order Status</h2>
+            <p><strong>Order ID:</strong> ${orderId}</p>
+            <p><strong>Current Status:</strong> ${currentStatus}</p>
+            <div class="form-group">
+                <label for="newStatus">New Status:</label>
+                <select id="newStatus" class="form-control">
+                    ${statusSelect}
+                </select>
+            </div>
+            <button onclick="confirmStatusUpdate('${orderId}')" class="btn btn-primary">Update Status</button>
+        `;
+        
+        showModal(modalContent);
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        alert('Error updating order status');
+    }
 }
 
-async function deleteOrder(id) {
+async function confirmStatusUpdate(orderId) {
+    const newStatus = document.getElementById('newStatus').value;
+    try {
+        await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+        closeModal('dashboardModal');
+        loadDashboard();
+        loadOrders();
+    } catch (error) {
+        console.error('Error confirming status update:', error);
+        alert('Error updating order status');
+    }
+}
+
+async function deleteOrder(orderId) {
     if (confirm('Are you sure you want to delete this order?')) {
         try {
-            await deleteDoc(doc(db, 'orders', id));
+            await deleteDoc(doc(db, 'orders', orderId));
             loadOrders();
+            loadDashboard();
         } catch (error) {
             console.error('Error deleting order:', error);
             alert('Error deleting order');
@@ -372,30 +693,86 @@ async function deleteOrder(id) {
     }
 }
 
-async function editCategory(id) {
-    console.log(`Edit category ${id}`);
-}
-
-async function deleteCategory(id) {
-    if (confirm('Are you sure you want to delete this category?')) {
-        try {
-            await deleteDoc(doc(db, 'categories', id));
-            loadCategories();
-        } catch (error) {
-            console.error('Error deleting category:', error);
-            alert('Error deleting category');
-        }
+async function editProduct(productId) {
+    try {
+        const productDoc = await getDoc(doc(db, 'products', productId));
+        const productData = productDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Product</h2>
+            <form id="editProductForm">
+                <div class="form-group">
+                    <label for="editProductName">Product Name</label>
+                    <input type="text" id="editProductName" value="${productData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductDescription">Description</label>
+                    <textarea id="editProductDescription" rows="3">${productData.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editProductPrice">Price</label>
+                    <input type="number" id="editProductPrice" value="${productData.price}" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductImageUrl">Image URL</label>
+                    <input type="url" id="editProductImageUrl" value="${productData.imageUrl}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductCategory">Category</label>
+                    <select id="editProductCategory" required>
+                        <!-- Categories will be loaded dynamically -->
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Product</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        // Load categories for the edit form
+        const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+        const categorySelect = document.getElementById('editProductCategory');
+        categorySelect.innerHTML = '<option value="">Select a category</option>';
+        categoriesSnapshot.forEach(doc => {
+            const category = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = category.name;
+            if (doc.id === productData.category) {
+                option.selected = true;
+            }
+            categorySelect.appendChild(option);
+        });
+        
+        // Handle form submission
+        document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedProduct = {
+                name: document.getElementById('editProductName').value,
+                description: document.getElementById('editProductDescription').value,
+                price: parseFloat(document.getElementById('editProductPrice').value),
+                imageUrl: document.getElementById('editProductImageUrl').value,
+                category: document.getElementById('editProductCategory').value
+            };
+            try {
+                await updateDoc(doc(db, 'products', productId), updatedProduct);
+                closeModal('dashboardModal');
+                loadProducts();
+            } catch (error) {
+                console.error('Error updating product:', error);
+                alert('Error updating product');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading product details:', error);
+        alert('Error loading product details');
     }
 }
 
-async function editProduct(id) {
-    console.log(`Edit product ${id}`);
-}
-
-async function deleteProduct(id) {
+async function deleteProduct(productId) {
     if (confirm('Are you sure you want to delete this product?')) {
         try {
-            await deleteDoc(doc(db, 'products', id));
+            await deleteDoc(doc(db, 'products', productId));
             loadProducts();
         } catch (error) {
             console.error('Error deleting product:', error);
@@ -404,14 +781,62 @@ async function deleteProduct(id) {
     }
 }
 
-async function editUser(id) {
-    console.log(`Edit user ${id}`);
+async function editUser(userId) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userData = userDoc.data();
+        
+        const modalContent = `
+            <h2>Edit User</h2>
+            <form id="editUserForm">
+                <div class="form-group">
+                    <label for="editUserName">Name</label>
+                    <input type="text" id="editUserName" value="${userData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editUserEmail">Email</label>
+                    <input type="email" id="editUserEmail" value="${userData.email}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editUserRole">Role</label>
+                    <select id="editUserRole">
+                        <option value="User" ${userData.role === 'User' ? 'selected' : ''}>User</option>
+                        <option value="Admin" ${userData.role === 'Admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Update User</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        // Handle form submission
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedUser = {
+                name: document.getElementById('editUserName').value,
+                email: document.getElementById('editUserEmail').value,
+                role: document.getElementById('editUserRole').value
+            };
+            try {
+                await updateDoc(doc(db, 'users', userId), updatedUser);
+                closeModal('dashboardModal');
+                loadUsers();
+            } catch (error) {
+                console.error('Error updating user:', error);
+                alert('Error updating user');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        alert('Error loading user details');
+    }
 }
 
-async function deleteUser(id) {
+async function deleteUser(userId) {
     if (confirm('Are you sure you want to delete this user?')) {
         try {
-            await deleteDoc(doc(db, 'users', id));
+            await deleteDoc(doc(db, 'users', userId));
             loadUsers();
         } catch (error) {
             console.error('Error deleting user:', error);
@@ -420,17 +845,77 @@ async function deleteUser(id) {
     }
 }
 
+function showModal(content, modalId = 'dashboardModal') {
+    const modal = document.getElementById(modalId) || createModal(modalId);
+    modal.querySelector('.modal-content').innerHTML = content;
+    modal.style.display = 'block';
+}
+
+function closeModal(modalId = 'dashboardModal') {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function createModal(modalId) {
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('${modalId}')">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
     checkAuth();
 
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
+        console.log('Login form found');
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const accessKey = document.getElementById('accessKey').value;
+            console.log('Login form submitted with key:', accessKey);
             login(accessKey);
         });
+    } else {
+        console.log('Login form not found');
     }
+
+    document.getElementById('add-service-btn').addEventListener('click', openAddServiceModal);
+
+    document.getElementById('addServiceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const newService = {
+            name: form.serviceName.value,
+            description: form.serviceDescription.value,
+            price: form.servicePrice.value,
+            category: form.serviceCategory.value,
+            rating: parseFloat(form.serviceRating.value),
+            imageUrl: form.serviceImageUrl.value
+        };
+        try {
+            await addDoc(collection(db, 'services'), newService);
+            closeModal('addServiceModal');
+            loadServices();
+        } catch (error) {
+            console.error('Error adding service:', error);
+            alert('Error adding service');
+        }
+    });
+
+    document.getElementById('service-search').addEventListener('input', (e) => {
+        searchServices(e.target.value);
+    });
+
 
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -454,6 +939,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'settings':
                     loadSettings();
+                    break;
+                case 'services':
+                    loadServices();
                     break;
             }
         });
@@ -503,6 +991,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error adding product:', error);
             alert('Error adding product');
         }
+
+        
     });
 
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
@@ -536,16 +1026,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
     }
+
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    const sidebar = document.querySelector('.sidebar');
+
+    toggleSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+
 });
 
 function generateProductUrl(productName) {
     return productName.toLowerCase().replace(/\s+/g, '-');
 }
 
-window.editOrder = editOrder;
+
+
+function hasDeliveryPersonPermissions() {
+    // This is a placeholder. You should implement your own logic to check permissions.
+    // For example, you might check the user's role in your authentication system.
+    // Return true if the user has delivery person permissions, false otherwise.
+    return true; // Placeholder: always returns true
+}
+
+
+// Make functions available globally
+window.viewOrderDetails = viewOrderDetails;
+window.updateOrderStatus = updateOrderStatus;
+window.confirmStatusUpdate = confirmStatusUpdate;
 window.deleteOrder = deleteOrder;
-window.editCategory = editCategory;
-window.deleteCategory = deleteCategory;
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
 window.editUser = editUser;
@@ -553,7 +1063,15 @@ window.deleteUser = deleteUser;
 window.openAddCategoryModal = openAddCategoryModal;
 window.openAddProductModal = openAddProductModal;
 window.closeModal = closeModal;
+window.goToDeliveryInterface = goToDeliveryInterface;
 
+window.editService = editService;
+window.deleteService = deleteService;
+window.openAddServiceModal = openAddServiceModal;
+
+
+
+// Export functions for potential use as a module
 export {
     loadDashboard,
     loadOrders,
@@ -565,12 +1083,16 @@ export {
     openAddCategoryModal,
     openAddProductModal,
     closeModal,
-    editOrder,
+    viewOrderDetails,
+    updateOrderStatus,
+    confirmStatusUpdate,
     deleteOrder,
-    editCategory,
-    deleteCategory,
     editProduct,
     deleteProduct,
     editUser,
-    deleteUser
+    deleteUser,
+    loadServices,
+    editService,
+    deleteService,
+    openAddServiceModal
 };
