@@ -4,43 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DeliveryGo Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
     <div id="loginContainer" class="login-container">
-        <div class="login-form">
+        <form id="loginForm" class="login-form">
             <h1>DeliveryGo</h1>
             <h2>Admin Login</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <input type="password" id="accessKey" placeholder="Enter Access Key" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-            </form>
+            <div class="form-group">
+                <input type="password" id="accessKey" placeholder="Enter Access Key" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
             <p id="loginError" class="error-message"></p>
-        </div>
+        </form>
     </div>
 
     <div id="appContainer" class="app-container" style="display: none;">
-        <div class="sidebar">
+        <nav class="sidebar">
             <div class="sidebar-header">
                 <h1 id="deliverygo" class="logo">DeliveryGo</h1>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li><a href="#" class="nav-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="orders"><i class="fas fa-shopping-cart"></i> <span>Orders</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="inventory"><i class="fas fa-box"></i> <span>Inventory</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="users"><i class="fas fa-users"></i> <span>Users</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="analytics"><i class="fas fa-chart-bar"></i> <span>Analytics</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="settings"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
-                    <li><a href="#" class="nav-item" data-section="services"><i class="fas fa-concierge-bell"></i> <span>Services</span></a></li>
-                </ul>
-            </nav>
-        </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="nav-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
+                <li><a href="#" class="nav-item" data-section="orders"><i class="fas fa-shopping-cart"></i> <span>Orders</span></a></li>
+                <li><a href="#" class="nav-item" data-section="inventory"><i class="fas fa-box"></i> <span>Inventory</span></a></li>
+                <li><a href="#" class="nav-item" data-section="users"><i class="fas fa-users"></i> <span>Users</span></a></li>
+                <li><a href="#" class="nav-item" data-section="analytics"><i class="fas fa-chart-bar"></i> <span>Analytics</span></a></li>
+                <li><a href="#" class="nav-item" data-section="settings"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+                <li><a href="#" class="nav-item" data-section="services"><i class="fas fa-concierge-bell"></i> <span>Services</span></a></li>
+                <li><a href="#" class="nav-item" data-section="supermarkets"><i class="fas fa-store"></i> <span>Supermarkets</span></a></li>
+            </ul>
+        </nav>
 
-        <div class="main-content" role="main">
+        <main class="main-content">
             <div class="top-bar">
                 <div class="search-bar">
                     <input type="text" placeholder="Search...">
@@ -49,28 +47,31 @@
                 <div class="user-menu">
                     <img src="https://via.placeholder.com/40" alt="User Avatar" class="avatar">
                     <span class="username">Admin</span>
-                    <button id="logoutBtn" class="btn btn-secondary btn-sm logout-btn">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary logout-btn">Logout</button>
                 </div>
             </div>
 
             <div class="content">
-                <!-- Dashboard Section -->
-                <div id="dashboard-section" class="section dashboard">
+                <section id="dashboard-section" class="section dashboard">
                     <h2 class="section-title">Dashboard</h2>
                     <div class="dashboard-grid">
                         <div id="total-orders" class="card">
+                            <i class="fas fa-shopping-cart"></i>
                             <h3>Total Orders</h3>
                             <p class="number">0</p>
                         </div>
                         <div id="total-revenue" class="card">
+                            <i class="fas fa-dollar-sign"></i>
                             <h3>Total Revenue</h3>
                             <p class="number">$0</p>
                         </div>
                         <div id="active-users" class="card">
+                            <i class="fas fa-users"></i>
                             <h3>Active Users</h3>
                             <p class="number">0</p>
                         </div>
                         <div id="product-categories" class="card">
+                            <i class="fas fa-tags"></i>
                             <h3>Product Categories</h3>
                             <p class="number">0</p>
                         </div>
@@ -79,10 +80,9 @@
                         <h3>Recent Orders</h3>
                         <div class="order-list"></div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Orders Section -->
-                <div id="orders-section" class="section orders" style="display: none;">
+                <section id="orders-section" class="section orders" style="display: none;">
                     <h2 class="section-title">Orders Management</h2>
                     <table id="orders-table">
                         <thead>
@@ -96,10 +96,9 @@
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
+                </section>
 
-                <!-- Inventory Section -->
-                <div id="inventory-section" class="section inventory" style="display: none;">
+                <section id="inventory-section" class="section inventory" style="display: none;">
                     <h2 class="section-title">Inventory Management</h2>
                     <div class="inventory-container">
                         <div class="categories-sidebar">
@@ -111,7 +110,7 @@
                             <div class="products-header">
                                 <h3>Products</h3>
                                 <div class="products-actions">
-                                    <input type="text" id="product-search" placeholder="Search products...">
+                                    <input type="text" id="product-search" placeholder="Search products">
                                     <select id="product-filter">
                                         <option value="">All Categories</option>
                                     </select>
@@ -121,10 +120,9 @@
                             <div id="products-grid" class="products-grid"></div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Users Section -->
-                <div id="users-section" class="section users" style="display: none;">
+                <section id="users-section" class="section users" style="display: none;">
                     <h2 class="section-title">Users Management</h2>
                     <table id="users-table">
                         <thead>
@@ -138,16 +136,16 @@
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
+                </section>
 
-                <!-- Analytics Section -->
                 <div id="analytics-section" class="section analytics" style="display: none;">
                     <h2 class="section-title">Analytics</h2>
-                    <div id="chart-container"></div>
+                    <div id="chart-container" style="position: relative; height:400px; width:100%">
+                        <canvas id="salesChart"></canvas>
+                    </div>
                 </div>
 
-                <!-- Settings Section -->
-                <div id="settings-section" class="section settings" style="display: none;">
+                <section id="settings-section" class="section settings" style="display: none;">
                     <h2 class="section-title">Settings</h2>
                     <form id="settings-form">
                         <div class="form-group">
@@ -168,27 +166,36 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Save Settings</button>
                     </form>
-                </div>
+                </section>
 
-                <!-- Services Section -->
-                <div id="services-section" class="section services" style="display: none;">
+                <section id="services-section" class="section services" style="display: none;">
                     <h2 class="section-title">Services Management</h2>
                     <div class="services-container">
                         <div class="services-header">
-                            <input type="text" id="service-search" placeholder="Search services...">
+                            <input type="text" id="service-search" placeholder="Search services">
                             <button id="add-service-btn" class="btn btn-primary">Add Service</button>
                         </div>
                         <div id="services-grid" class="services-grid"></div>
                     </div>
-                </div>
+                </section>
+
+                <section id="supermarkets-section" class="section supermarkets" style="display: none;">
+                    <h2 class="section-title">Supermarkets Management</h2>
+                    <div class="supermarkets-container">
+                        <div class="supermarkets-header">
+                            <input type="text" id="supermarket-search" placeholder="Search supermarkets">
+                            <button id="add-supermarket-btn" class="btn btn-primary">Add Supermarket</button>
+                        </div>
+                        <div id="supermarkets-grid" class="supermarkets-grid"></div>
+                    </div>
+                </section>
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- Add Category Modal -->
     <div id="addCategoryModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('addCategoryModal')">&times;</span>
+            <span class="close">&times;</span>
             <h2>Add New Category</h2>
             <form id="addCategoryForm">
                 <div class="form-group">
@@ -200,17 +207,16 @@
                     <textarea id="categoryDescription" name="categoryDescription"></textarea>
                 </div>
                 <div class="form-actions">
-                    <button type="button" onclick="closeModal('addCategoryModal')" class="btn btn-secondary">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCategoryModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Category</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Add Product Modal -->
     <div id="addProductModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('addProductModal')">&times;</span>
+            <span class="close">&times;</span>
             <h2>Add New Product</h2>
             <form id="addProductForm">
                 <div class="form-group">
@@ -230,37 +236,24 @@
                     <input type="url" id="productImageUrl" name="productImageUrl" required>
                 </div>
                 <div class="form-group">
-                    <label for="productCategory">Category</label>
-                    <select id="productCategory" name="productCategory" required></select>
-                </div>
-                <div class="form-group">
                     <label for="productUnit">Unit</label>
                     <input type="text" id="productUnit" name="productUnit" required>
                 </div>
                 <div class="form-group">
-                    <label for="productSellerId">Seller ID</label>
-                    <input type="text" id="productSellerId" name="productSellerId" required>
-                </div>
-                <div class="form-group">
-                    <label for="productSellerType">Seller Type</label>
-                    <select id="productSellerType" name="productSellerType" required>
-                        <option value="Restaurant">Restaurant</option>
-                        <option value="Market">Market</option>
-                        <option value="Other">Other</option>
-                    </select>
+                    <label for="productSupermarket">Supermarket</label>
+                    <select id="productSupermarket" name="productSupermarket" required></select>
                 </div>
                 <div class="form-actions">
-                    <button type="button" onclick="closeModal('addProductModal')" class="btn btn-secondary">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addProductModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Product</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Add Service Modal -->
     <div id="addServiceModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('addServiceModal')">&times;</span>
+            <span class="close">&times;</span>
             <h2>Add New Service</h2>
             <form id="addServiceForm">
                 <div class="form-group">
@@ -269,11 +262,11 @@
                 </div>
                 <div class="form-group">
                     <label for="serviceDescription">Description</label>
-                    <textarea id="serviceDescription" name="serviceDescription" required></textarea>
+                    <textarea id="serviceDescription" name="serviceDescription"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="servicePrice">Price</label>
-                    <input type="text" id="servicePrice" name="servicePrice" required>
+                    <input type="number" id="servicePrice" name="servicePrice" step="0.01" required>
                 </div>
                 <div class="form-group">
                     <label for="serviceCategory">Category</label>
@@ -281,20 +274,50 @@
                 </div>
                 <div class="form-group">
                     <label for="serviceRating">Rating</label>
-                    <input type="number" id="serviceRating" name="serviceRating" step="0.1" min="0" max="5" required>
+                    <input type="number" id="serviceRating" name="serviceRating" min="0" max="5" step="0.1" required>
                 </div>
                 <div class="form-group">
                     <label for="serviceImageUrl">Image URL</label>
                     <input type="url" id="serviceImageUrl" name="serviceImageUrl" required>
                 </div>
                 <div class="form-actions">
-                    <button type="button" onclick="closeModal('addServiceModal')" class="btn btn-secondary">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addServiceModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Service</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <script type="module" src="script.js"></script>
+    <div id="addSupermarketModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Supermarket</h2>
+            <form id="addSupermarketForm">
+                <div class="form-group">
+                    <label for="supermarketName">Supermarket Name</label>
+                    <input type="text" id="supermarketName" name="supermarketName" required>
+                </div>
+                <div class="form-group">
+                    <label for="supermarketAddress">Address</label>
+                    <input type="text" id="supermarketAddress" name="supermarketAddress" required>
+                </div>
+                <div class="form-group">
+                    <label for="supermarketImageUrl">Image URL</label>
+                    <input type="url" id="supermarketImageUrl" name="supermarketImageUrl" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addSupermarketModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Supermarket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js" type="module"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
