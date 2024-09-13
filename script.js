@@ -1,43 +1,23 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD_jN-BTI4QirVq5EsMlLhJinnx556B6Ck",
-  authDomain: "glovo-app-939d7.firebaseapp.com",
-  databaseURL: "https://glovo-app-939d7-default-rtdb.firebaseio.com",
-  projectId: "glovo-app-939d7",
-  storageBucket: "glovo-app-939d7.appspot.com",
-  messagingSenderId: "447179958505",
-  appId: "1:447179958505:web:f87955e4e92c0346a12878",
-  measurementId: "G-D6ZV5RLQ7B"
+    apiKey: "AIzaSyD_jN-BTI4QirVq5EsMlLhJinnx556B6Ck",
+    authDomain: "glovo-app-939d7.firebaseapp.com",
+    databaseURL: "https://glovo-app-939d7-default-rtdb.firebaseio.com",
+    projectId: "glovo-app-939d7",
+    storageBucket: "glovo-app-939d7.appspot.com",
+    messagingSenderId: "447179958505",
+    appId: "1:447179958505:web:f87955e4e92c0346a12878",
+    measurementId: "G-D6ZV5RLQ7B"
 };
 
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-function goToDeliveryInterface() {
-    // Redirect to the delivery interface page
-    window.location.href = 'delivery-interfacedelivery_interface.html';
-}
-
-
-
-function showDeliveryInterfaceButton() {
-    const dashboardContent = document.querySelector('.main-content');
-    dashboardContent.innerHTML = `
-        <h2>Welcome, Delivery Person!</h2>
-        <p>Click the button below to access your delivery interface:</p>
-        <button id="goToDeliveryInterfaceBtn" class="btn btn-primary">Go to Delivery Interface</button>
-    `;
-    
-    // Add event listener to the button
-    document.getElementById('goToDeliveryInterfaceBtn').addEventListener('click', window.goToDeliveryInterface);
-}
 
 function checkAuth() {
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
@@ -55,178 +35,6 @@ function checkAuth() {
         document.getElementById('loginContainer').style.display = 'flex';
         document.getElementById('appContainer').style.display = 'none';
     }
-}
-
-async function loadServices() {
-    const servicesGrid = document.getElementById('services-grid');
-    servicesGrid.innerHTML = '';
-
-    for (let i = 0; i < 8; i++) {
-        const shimmerCard = document.createElement('div');
-        shimmerCard.className = 'service-card loading';
-        shimmerCard.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
-        servicesGrid.appendChild(shimmerCard);
-    }
-
-    try {
-        const servicesSnapshot = await getDocs(collection(db, 'services'));
-        
-        servicesGrid.innerHTML = '';
-
-        servicesSnapshot.forEach(doc => {
-            const service = doc.data();
-            const serviceCard = createServiceCard(doc.id, service);
-            servicesGrid.appendChild(serviceCard);
-        });
-    } catch (error) {
-        console.error('Error loading services:', error);
-        servicesGrid.innerHTML = '<p>Error loading services</p>';
-    }
-}
-
-function createServiceCard(id, service) {
-    const card = document.createElement('div');
-    card.className = 'service-card';
-    card.innerHTML = `
-        <img src="${service.imageUrl}" alt="${service.name}" class="service-image">
-        <h4 class="service-name">${service.name}</h4>
-        <p class="service-price">${service.price}</p>
-        <p class="service-category">${service.category}</p>
-        <p class="service-rating">Rating: ${service.rating}</p>
-        <div class="service-actions">
-            <button onclick="editService('${id}')" class="btn btn-secondary btn-sm">Edit</button>
-            <button onclick="deleteService('${id}')" class="btn btn-danger btn-sm">Delete</button>
-        </div>
-    `;
-    return card;
-}
-
-function searchServices(query) {
-    const serviceCards = document.querySelectorAll('.service-card');
-    const lowerQuery = query.toLowerCase();
-    serviceCards.forEach(card => {
-        const serviceName = card.querySelector('.service-name').textContent.toLowerCase();
-        if (serviceName.includes(lowerQuery)) {
-            card.style.display = 'flex';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-
-async function editService(serviceId) {
-    try {
-        const serviceDoc = await getDoc(doc(db, 'services', serviceId));
-        const serviceData = serviceDoc.data();
-        
-        const modalContent = `
-            <h2>Edit Service</h2>
-            <form id="editServiceForm">
-                <div class="form-group">
-                    <label for="editServiceName">Service Name</label>
-                    <input type="text" id="editServiceName" value="${serviceData.name}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceDescription">Description</label>
-                    <textarea id="editServiceDescription" rows="3">${serviceData.description || ''}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="editServicePrice">Price</label>
-                    <input type="text" id="editServicePrice" value="${serviceData.price}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceCategory">Category</label>
-                    <input type="text" id="editServiceCategory" value="${serviceData.category}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceRating">Rating</label>
-                    <input type="number" id="editServiceRating" value="${serviceData.rating}" step="0.1" min="0" max="5" required>
-                </div>
-                <div class="form-group">
-                    <label for="editServiceImageUrl">Image URL</label>
-                    <input type="url" id="editServiceImageUrl" value="${serviceData.imageUrl}" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Update Service</button>
-            </form>
-        `;
-        
-        showModal(modalContent);
-        
-        // Handle form submission
-        document.getElementById('editServiceForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const updatedService = {
-                name: document.getElementById('editServiceName').value,
-                description: document.getElementById('editServiceDescription').value,
-                price: document.getElementById('editServicePrice').value,
-                category: document.getElementById('editServiceCategory').value,
-                rating: parseFloat(document.getElementById('editServiceRating').value),
-                imageUrl: document.getElementById('editServiceImageUrl').value
-            };
-            try {
-                await updateDoc(doc(db, 'services', serviceId), updatedService);
-                closeModal('dashboardModal');
-                loadServices();
-            } catch (error) {
-                console.error('Error updating service:', error);
-                alert('Error updating service');
-            }
-        });
-    } catch (error) {
-        console.error('Error loading service details:', error);
-        alert('Error loading service details');
-    }
-}
-
-async function deleteService(serviceId) {
-    if (confirm('Are you sure you want to delete this service?')) {
-        try {
-            await deleteDoc(doc(db, 'services', serviceId));
-            loadServices();
-        } catch (error) {
-            console.error('Error deleting service:', error);
-            alert('Error deleting service');
-        }
-    }
-}
-
-function openAddServiceModal() {
-    const modal = document.getElementById('addServiceModal');
-    modal.style.display = 'block';
-}
-
-
-async function login(accessKey) {
-    console.log('Login attempt with key:', accessKey);
-    if (accessKey === '159357') {
-        console.log('Correct access key entered');
-        // Remove the call to getUserRole
-        const userRole = 'admin'; // Set a default role or implement role logic here
-        sessionStorage.setItem('isLoggedIn', 'true');
-        sessionStorage.setItem('userRole', userRole);
-        checkAuth();
-    } else {
-        console.log('Incorrect access key');
-        document.getElementById('loginError').textContent = 'Invalid access key';
-    }
-}
-
-function logout() {
-    console.log('Logging out');
-    sessionStorage.removeItem('isLoggedIn');
-    checkAuth();
-}
-
-function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
-    });
-    document.getElementById(`${sectionId}-section`).style.display = 'block';
-    
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelector(`.nav-item[data-section="${sectionId}"]`).classList.add('active');
 }
 
 async function loadDashboard() {
@@ -257,6 +65,7 @@ async function loadDashboard() {
         dashboardCards.forEach((card, index) => {
             card.classList.remove('loading');
             card.innerHTML = `
+                <i class="${['fas fa-shopping-cart', 'fas fa-dollar-sign', 'fas fa-users', 'fas fa-tags'][index]}"></i>
                 <h3>${['Total Orders', 'Total Revenue', 'Active Users', 'Product Categories'][index]}</h3>
                 <p class="number">${[totalOrders, `$${totalRevenue.toFixed(2)}`, activeUsers, productCategories][index]}</p>
             `;
@@ -407,12 +216,18 @@ async function loadProducts() {
 
     try {
         const productsSnapshot = await getDocs(collection(db, 'products'));
+        const supermarketsSnapshot = await getDocs(collection(db, 'supermarkets'));
         
+        const supermarkets = {};
+        supermarketsSnapshot.forEach(doc => {
+            supermarkets[doc.id] = doc.data().name;
+        });
+
         productsGrid.innerHTML = '';
 
         productsSnapshot.forEach(doc => {
             const product = doc.data();
-            const productCard = createProductCard(doc.id, product);
+            const productCard = createProductCard(doc.id, product, supermarkets[product.supermarketId]);
             productsGrid.appendChild(productCard);
         });
     } catch (error) {
@@ -421,7 +236,7 @@ async function loadProducts() {
     }
 }
 
-function createProductCard(id, product) {
+function createProductCard(id, product, supermarketName) {
     const card = document.createElement('div');
     card.className = 'product-card';
     card.innerHTML = `
@@ -429,6 +244,7 @@ function createProductCard(id, product) {
         <h4 class="product-name">${product.name}</h4>
         <p class="product-price">$${product.price.toFixed(2)}</p>
         <p class="product-category">${product.category}</p>
+        <p class="product-supermarket">${supermarketName || 'N/A'}</p>
         <div class="product-actions">
             <button onclick="editProduct('${id}')" class="btn btn-secondary btn-sm">Edit</button>
             <button onclick="deleteProduct('${id}')" class="btn btn-danger btn-sm">Delete</button>
@@ -495,6 +311,12 @@ async function loadUsers() {
 }
 
 async function loadAnalytics() {
+    const chartCanvas = document.getElementById('salesChart');
+    if (!chartCanvas) {
+        console.error('Chart canvas not found');
+        return;
+    }
+
     try {
         const salesQuery = query(collection(db, 'sales'), orderBy('date'), limit(30));
         const salesSnapshot = await getDocs(salesQuery);
@@ -507,8 +329,13 @@ async function loadAnalytics() {
             salesData.push(sale.amount);
         });
 
-        const ctx = document.getElementById('chart-container').getContext('2d');
-        new Chart(ctx, {
+        // Destroy existing chart if it exists
+        if (window.salesChart instanceof Chart) {
+            window.salesChart.destroy();
+        }
+
+        // Create new chart
+        window.salesChart = new Chart(chartCanvas, {
             type: 'line',
             data: {
                 labels: labels,
@@ -526,7 +353,10 @@ async function loadAnalytics() {
         });
     } catch (error) {
         console.error('Error loading analytics:', error);
-        document.getElementById('chart-container').innerHTML = '<p>Error loading analytics data</p>';
+        const chartContainer = document.getElementById('chart-container');
+        if (chartContainer) {
+            chartContainer.innerHTML = '<p>Error loading analytics data</p>';
+        }
     }
 }
 
@@ -545,32 +375,154 @@ async function loadSettings() {
     }
 }
 
-function openAddCategoryModal() {
-    const modal = document.getElementById('addCategoryModal');
-    modal.style.display = 'block';
-}
+async function loadServices() {
+    const servicesGrid = document.getElementById('services-grid');
+    servicesGrid.innerHTML = '';
 
-function openAddProductModal() {
-    const modal = document.getElementById('addProductModal');
-    modal.style.display = 'block';
-    loadCategoriesForProductForm();
-}
+    for (let i = 0; i < 8; i++) {
+        const shimmerCard = document.createElement('div');
+        shimmerCard.className = 'service-card loading';
+        shimmerCard.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
+        servicesGrid.appendChild(shimmerCard);
+    }
 
-async function loadCategoriesForProductForm() {
     try {
-        const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-        const categorySelect = document.getElementById('productCategory');
-        categorySelect.innerHTML = '<option value="">Select a category</option>';
-        categoriesSnapshot.forEach(doc => {
-            const category = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = category.name;
-            categorySelect.appendChild(option);
+        const servicesSnapshot = await getDocs(collection(db, 'services'));
+        
+        servicesGrid.innerHTML = '';
+
+        servicesSnapshot.forEach(doc => {
+            const service = doc.data();
+            const serviceCard = createServiceCard(doc.id, service);
+            servicesGrid.appendChild(serviceCard);
         });
     } catch (error) {
-        console.error('Error loading categories for product form:', error);
+        console.error('Error loading services:', error);
+        servicesGrid.innerHTML = '<p>Error loading services</p>';
     }
+}
+
+function createServiceCard(id, service) {
+    const card = document.createElement('div');
+    card.className = 'service-card';
+    card.innerHTML = `
+        <img src="${service.imageUrl}" alt="${service.name}" class="service-image">
+        <div class="service-info">
+            <h4 class="service-name">${service.name}</h4>
+            <p class="service-price">${service.price}</p>
+            <p class="service-category">${service.category}</p>
+            <p class="service-rating">Rating: ${service.rating}</p>
+        </div>
+        <div class="service-actions">
+            <button onclick="editService('${id}')" class="btn btn-secondary btn-sm">Edit</button>
+            <button onclick="deleteService('${id}')" class="btn btn-danger btn-sm">Delete</button>
+        </div>
+    `;
+    return card;
+}
+
+function searchServices(query) {
+    const serviceCards = document.querySelectorAll('.service-card');
+    const lowerQuery = query.toLowerCase();
+    serviceCards.forEach(card => {
+        const serviceName = card.querySelector('.service-name').textContent.toLowerCase();
+        if (serviceName.includes(lowerQuery)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+async function loadSupermarkets() {
+    const supermarketsGrid = document.getElementById('supermarkets-grid');
+    supermarketsGrid.innerHTML = '';
+
+    for (let i = 0; i < 8; i++) {
+        const shimmerCard = document.createElement('div');
+        shimmerCard.className = 'supermarket-card loading';
+        shimmerCard.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
+        supermarketsGrid.appendChild(shimmerCard);
+    }
+
+    try {
+        const supermarketsSnapshot = await getDocs(collection(db, 'supermarkets'));
+        
+        supermarketsGrid.innerHTML = '';
+
+        supermarketsSnapshot.forEach(doc => {
+            const supermarket = doc.data();
+            const supermarketCard = createSupermarketCard(doc.id, supermarket);
+            supermarketsGrid.appendChild(supermarketCard);
+        });
+    } catch (error) {
+        console.error('Error loading supermarkets:', error);
+        supermarketsGrid.innerHTML = '<p>Error loading supermarkets</p>';
+    }
+}
+
+function createSupermarketCard(id, supermarket) {
+    const card = document.createElement('div');
+    card.className = 'supermarket-card';
+    card.innerHTML = `
+        <img src="${supermarket.imageUrl}" alt="${supermarket.name}" class="supermarket-image">
+        <div class="supermarket-info">
+            <h4 class="supermarket-name">${supermarket.name}</h4>
+            <p class="supermarket-address">${supermarket.address}</p>
+        </div>
+        <div class="supermarket-actions">
+            <button onclick="viewSupermarketProducts('${id}')" class="btn btn-primary btn-sm">View Products</button>
+            <button onclick="openAddProductToSupermarketModal('${id}')" class="btn btn-success btn-sm">Add Product</button>
+            <button onclick="editSupermarket('${id}')" class="btn btn-secondary btn-sm">Edit</button>
+            <button onclick="deleteSupermarket('${id}')" class="btn btn-danger btn-sm">Delete</button>
+        </div>
+    `;
+    return card;
+}
+
+function searchSupermarkets(query) {
+    const supermarketCards = document.querySelectorAll('.supermarket-card');
+    const lowerQuery = query.toLowerCase();
+    supermarketCards.forEach(card => {
+        const supermarketName = card.querySelector('.supermarket-name').textContent.toLowerCase();
+        if (supermarketName.includes(lowerQuery)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+async function login(accessKey) {
+    console.log('Login attempt with key:', accessKey);
+    if (accessKey === '159357') {
+        console.log('Correct access key entered');
+        const userRole = 'admin'; 
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('userRole', userRole);
+        checkAuth();
+    } else {
+        console.log('Incorrect access key');
+        document.getElementById('loginError').textContent = 'Invalid access key';
+    }
+}
+
+function logout() {
+    console.log('Logging out');
+    sessionStorage.removeItem('isLoggedIn');
+    checkAuth();
+}
+
+function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+    });
+    document.getElementById(`${sectionId}-section`).style.display = 'block';
+    
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`.nav-item[data-section="${sectionId}"]`).classList.add('active');
 }
 
 async function viewOrderDetails(orderId) {
@@ -718,9 +670,12 @@ async function editProduct(productId) {
                     <input type="url" id="editProductImageUrl" value="${productData.imageUrl}" required>
                 </div>
                 <div class="form-group">
-                    <label for="editProductCategory">Category</label>
-                    <select id="editProductCategory" required>
-                        <!-- Categories will be loaded dynamically -->
+                    <label for="editProductUnit">Unit</label>
+                    <input type="text" id="editProductUnit" value="${productData.unit}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductSupermarket">Supermarket</label>
+                    <select id="editProductSupermarket" required>
                     </select>
                 </div>
                 <button type="submit" class="btn btn-primary">Update Product</button>
@@ -728,23 +683,22 @@ async function editProduct(productId) {
         `;
         
         showModal(modalContent);
-        
-        // Load categories for the edit form
-        const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-        const categorySelect = document.getElementById('editProductCategory');
-        categorySelect.innerHTML = '<option value="">Select a category</option>';
-        categoriesSnapshot.forEach(doc => {
-            const category = doc.data();
+
+        // Load supermarkets for the edit form
+        const supermarketsSnapshot = await getDocs(collection(db, 'supermarkets'));
+        const supermarketSelect = document.getElementById('editProductSupermarket');
+        supermarketSelect.innerHTML = '<option value="">Select a supermarket</option>';
+        supermarketsSnapshot.forEach(doc => {
+            const supermarket = doc.data();
             const option = document.createElement('option');
             option.value = doc.id;
-            option.textContent = category.name;
-            if (doc.id === productData.category) {
+            option.textContent = supermarket.name;
+            if (doc.id === productData.supermarketId) {
                 option.selected = true;
             }
-            categorySelect.appendChild(option);
+            supermarketSelect.appendChild(option);
         });
         
-        // Handle form submission
         document.getElementById('editProductForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const updatedProduct = {
@@ -752,7 +706,8 @@ async function editProduct(productId) {
                 description: document.getElementById('editProductDescription').value,
                 price: parseFloat(document.getElementById('editProductPrice').value),
                 imageUrl: document.getElementById('editProductImageUrl').value,
-                category: document.getElementById('editProductCategory').value
+                unit: document.getElementById('editProductUnit').value,
+                supermarketId: document.getElementById('editProductSupermarket').value
             };
             try {
                 await updateDoc(doc(db, 'products', productId), updatedProduct);
@@ -810,7 +765,6 @@ async function editUser(userId) {
         
         showModal(modalContent);
         
-        // Handle form submission
         document.getElementById('editUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const updatedUser = {
@@ -845,6 +799,170 @@ async function deleteUser(userId) {
     }
 }
 
+async function editService(serviceId) {
+    try {
+        const serviceDoc = await getDoc(doc(db, 'services', serviceId));
+        const serviceData = serviceDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Service</h2>
+            <form id="editServiceForm">
+                <div class="form-group">
+                    <label for="editServiceName">Service Name</label>
+                    <input type="text" id="editServiceName" value="${serviceData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceDescription">Description</label>
+                    <textarea id="editServiceDescription" rows="3">${serviceData.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editServicePrice">Price</label>
+                    <input type="text" id="editServicePrice" value="${serviceData.price}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceCategory">Category</label>
+                    <input type="text" id="editServiceCategory" value="${serviceData.category}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceRating">Rating</label>
+                    <input type="number" id="editServiceRating" value="${serviceData.rating}" step="0.1" min="0" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label for="editServiceImageUrl">Image URL</label>
+                    <input type="url" id="editServiceImageUrl" value="${serviceData.imageUrl}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Service</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        document.getElementById('editServiceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedService = {
+                name: document.getElementById('editServiceName').value,
+                description: document.getElementById('editServiceDescription').value,
+                price: document.getElementById('editServicePrice').value,
+                category: document.getElementById('editServiceCategory').value,
+                rating: parseFloat(document.getElementById('editServiceRating').value),
+                imageUrl: document.getElementById('editServiceImageUrl').value
+            };
+            try {
+                await updateDoc(doc(db, 'services', serviceId), updatedService);
+                closeModal('dashboardModal');
+                loadServices();
+            } catch (error) {
+                console.error('Error updating service:', error);
+                alert('Error updating service');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading service details:', error);
+        alert('Error loading service details');
+    }
+}
+
+async function deleteService(serviceId) {
+    if (confirm('Are you sure you want to delete this service?')) {
+        try {
+            await deleteDoc(doc(db, 'services', serviceId));
+            loadServices();
+        } catch (error) {
+            console.error('Error deleting service:', error);
+            alert('Error deleting service');
+        }
+    }
+}
+
+async function editSupermarket(supermarketId) {
+    try {
+        const supermarketDoc = await getDoc(doc(db, 'supermarkets', supermarketId));
+        const supermarketData = supermarketDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Supermarket</h2>
+            <form id="editSupermarketForm">
+                <div class="form-group">
+                    <label for="editSupermarketName">Supermarket Name</label>
+                    <input type="text" id="editSupermarketName" value="${supermarketData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSupermarketAddress">Address</label>
+                    <input type="text" id="editSupermarketAddress" value="${supermarketData.address}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSupermarketImageUrl">Image URL</label>
+                    <input type="url" id="editSupermarketImageUrl" value="${supermarketData.imageUrl}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Supermarket</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        document.getElementById('editSupermarketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedSupermarket = {
+                name: document.getElementById('editSupermarketName').value,
+                address: document.getElementById('editSupermarketAddress').value,
+                imageUrl: document.getElementById('editSupermarketImageUrl').value
+            };
+            try {
+                await updateDoc(doc(db, 'supermarkets', supermarketId), updatedSupermarket);
+                closeModal('dashboardModal');
+                loadSupermarkets();
+            } catch (error) {
+                console.error('Error updating supermarket:', error);
+                alert('Error updating supermarket');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading supermarket details:', error);
+        alert('Error loading supermarket details');
+    }
+}
+
+async function deleteSupermarket(supermarketId) {
+    if (confirm('Are you sure you want to delete this supermarket?')) {
+        try {
+            await deleteDoc(doc(db, 'supermarkets', supermarketId));
+            loadSupermarkets();
+        } catch (error) {
+            console.error('Error deleting supermarket:', error);
+            alert('Error deleting supermarket');
+        }
+    }
+}
+
+async function viewSupermarketProducts(supermarketId) {
+    try {
+        const productsSnapshot = await getDocs(query(collection(db, 'products'), where('supermarketId', '==', supermarketId)));
+        const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const modalContent = `
+            <h2>Supermarket Products</h2>
+            <div class="products-grid">
+                ${products.map(product => `
+                    <div class="product-card" data-product-id="${product.id}"> 
+                        <img src="${product.imageUrl}" alt="${product.name}" class="product-image">
+                        <h4 class="product-name">${product.name}</h4>
+                        <p class="product-price">$${product.price.toFixed(2)}</p>
+                        <div class="product-actions">
+                            <button onclick="editProduct('${product.id}')" class="btn btn-secondary btn-sm">Edit</button>
+                            <button onclick="deleteProduct('${product.id}')" class="btn btn-danger btn-sm">Delete</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        showModal(modalContent, 'supermarketProductsModal');
+    } catch (error) {
+        console.error('Error loading supermarket products:', error);
+        alert('Error loading supermarket products');
+    }
+}
+
 function showModal(content, modalId = 'dashboardModal') {
     const modal = document.getElementById(modalId) || createModal(modalId);
     modal.querySelector('.modal-content').innerHTML = content;
@@ -872,6 +990,42 @@ function createModal(modalId) {
     return modal;
 }
 
+function openAddCategoryModal() {
+    const modal = document.getElementById('addCategoryModal');
+    if (modal) {
+        modal.style.display = 'block';
+    } else {
+        console.error('Add Category Modal not found in the DOM');
+    }
+}
+
+function openAddProductModal() {
+    const modal = document.getElementById('addProductModal');
+    if (modal) {
+        modal.style.display = 'block';
+    } else {
+        console.error('Add Product Modal not found in the DOM');
+    }
+}
+
+function openAddServiceModal() {
+    const modal = document.getElementById('addServiceModal');
+    if (modal) {
+        modal.style.display = 'block';
+    } else {
+        console.error('Add Service Modal not found in the DOM');
+    }
+}
+
+function openAddSupermarketModal() {
+    const modal = document.getElementById('addSupermarketModal');
+    if (modal) {
+        modal.style.display = 'block';
+    } else {
+        console.error('Add Supermarket Modal not found in the DOM');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded');
     checkAuth();
@@ -889,7 +1043,87 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Login form not found');
     }
 
-    document.getElementById('add-service-btn').addEventListener('click', openAddServiceModal);
+    const addCategoryBtn = document.getElementById('add-category-btn');
+    if (addCategoryBtn) {
+        addCategoryBtn.addEventListener('click', openAddCategoryModal);
+    } else {
+        console.error('Add Category button not found');
+    }
+
+    const addProductBtn = document.getElementById('add-product-btn');
+    if (addProductBtn) {
+        addProductBtn.addEventListener('click', openAddProductModal);
+    } else {
+        console.error('Add Product button not found');
+    }
+
+    const addServiceBtn = document.getElementById('add-service-btn');
+    if (addServiceBtn) {
+        addServiceBtn.addEventListener('click', openAddServiceModal);
+    } else {
+        console.error('Add Service button not found');
+    }
+
+    const addSupermarketBtn = document.getElementById('add-supermarket-btn');
+    if (addSupermarketBtn) {
+        addSupermarketBtn.addEventListener('click', openAddSupermarketModal);
+    } else {
+        console.error('Add Supermarket button not found');
+    }
+
+    document.getElementById('addCategoryForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const newCategory = {
+            name: form.categoryName.value,
+            description: form.categoryDescription.value,
+        };
+        try {
+            await addDoc(collection(db, 'categories'), newCategory);
+            closeModal('addCategoryModal');
+            loadCategories();
+        } catch (error) {
+            console.error('Error adding category:', error);
+            alert('Error adding category');
+        }
+    });
+    
+    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const supermarketId = form.productSupermarket.value;
+
+        let category = "";
+        try {
+            const supermarketDoc = await getDoc(doc(db, 'supermarkets', supermarketId));
+            if (supermarketDoc.exists()) {
+                category = supermarketDoc.data().category || ''; 
+            }
+        } catch (error) {
+            console.error('Error fetching supermarket category:', error);
+        }
+
+        const newProduct = {
+            name: form.productName.value,
+            description: form.productDescription.value,
+            price: parseFloat(form.productPrice.value),
+            imageUrl: form.productImageUrl.value,
+            category: category,
+            unit: form.productUnit.value,
+            popularity: 0,
+            averageRating: 0,
+            url: generateProductUrl(form.productName.value),
+            supermarketId: supermarketId
+        };
+        try {
+            await addDoc(collection(db, 'products'), newProduct);
+            closeModal('addProductModal');
+            loadProducts();
+        } catch (error) {
+            console.error('Error adding product:', error);
+            alert('Error adding product');
+        }
+    });
 
     document.getElementById('addServiceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -912,10 +1146,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('service-search').addEventListener('input', (e) => {
-        searchServices(e.target.value);
+    document.getElementById('addSupermarketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const newSupermarket = {
+            name: form.supermarketName.value,
+            address: form.supermarketAddress.value,
+            imageUrl: form.supermarketImageUrl.value
+        };
+        try {
+            await addDoc(collection(db, 'supermarkets'), newSupermarket);
+            closeModal('addSupermarketModal');
+            loadSupermarkets();
+        } catch (error) {
+            console.error('Error adding supermarket:', error);
+            alert('Error adding supermarket');
+        }
     });
 
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const settings = Object.fromEntries(formData.entries());
+        try {
+            await setDoc(doc(db, 'settings', 'app_settings'), settings);
+            alert('Settings saved successfully');
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            alert('Error saving settings');
+        }
+    });
 
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -943,69 +1203,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'services':
                     loadServices();
                     break;
+                case 'supermarkets':
+                    loadSupermarkets();
+                    break;
             }
         });
-    });
-
-    document.getElementById('add-category-btn').addEventListener('click', openAddCategoryModal);
-    document.getElementById('add-product-btn').addEventListener('click', openAddProductModal);
-
-    document.getElementById('addCategoryForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const newCategory = {
-            name: form.categoryName.value,
-            description: form.categoryDescription.value,
-        };
-        try {
-            await addDoc(collection(db, 'categories'), newCategory);
-            closeModal('addCategoryModal');
-            loadCategories();
-        } catch (error) {
-            console.error('Error adding category:', error);
-            alert('Error adding category');
-        }
-    });
-    
-    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const newProduct = {
-            name: form.productName.value,
-            description: form.productDescription.value,
-            price: parseFloat(form.productPrice.value),
-            imageUrl: form.productImageUrl.value,
-            category: form.productCategory.value,
-            unit: form.productUnit.value,
-            sellerId: form.productSellerId.value,
-            sellerType: form.productSellerType.value,
-            popularity: 0,
-            averageRating: 0,
-            url: generateProductUrl(form.productName.value)
-        };
-        try {
-            await addDoc(collection(db, 'products'), newProduct);
-            closeModal('addProductModal');
-            loadProducts();
-        } catch (error) {
-            console.error('Error adding product:', error);
-            alert('Error adding product');
-        }
-
-        
-    });
-
-    document.getElementById('settings-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const settings = Object.fromEntries(formData.entries());
-        try {
-            await setDoc(doc(db, 'settings', 'app_settings'), settings);
-            alert('Settings saved successfully');
-        } catch (error) {
-            console.error('Error saving settings:', error);
-            alert('Error saving settings');
-        }
     });
 
     window.onclick = function(event) {
@@ -1022,36 +1224,63 @@ document.addEventListener('DOMContentLoaded', () => {
         filterProductsByCategory(e.target.value);
     });
 
+    document.getElementById('service-search').addEventListener('input', (e) => {
+        searchServices(e.target.value);
+    });
+
+    document.getElementById('supermarket-search').addEventListener('input', (e) => {
+        searchSupermarkets(e.target.value);
+    });
+
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
     }
-
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const sidebar = document.querySelector('.sidebar');
-
-    toggleSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
-
-
 });
 
 function generateProductUrl(productName) {
     return productName.toLowerCase().replace(/\s+/g, '-');
 }
 
+async function openAddProductToSupermarketModal(supermarketId) {
+    const modal = document.getElementById('addProductModal');
+    if (modal) {
+        modal.style.display = 'block';
 
+        // Load supermarkets
+        const supermarketsSnapshot = await getDocs(collection(db, 'supermarkets'));
+        const supermarketSelect = document.getElementById('productSupermarket');
+        supermarketSelect.innerHTML = '<option value="">Select a supermarket</option>';
+        supermarketsSnapshot.forEach(doc => {
+            const supermarket = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = supermarket.name;
+            supermarketSelect.appendChild(option);
+        });
 
-function hasDeliveryPersonPermissions() {
-    // This is a placeholder. You should implement your own logic to check permissions.
-    // For example, you might check the user's role in your authentication system.
-    // Return true if the user has delivery person permissions, false otherwise.
-    return true; // Placeholder: always returns true
+        // Select the appropriate supermarket option
+        supermarketSelect.value = supermarketId;
+    } else {
+        console.error('Add Product Modal not found in the DOM');
+    }
 }
 
+function showDeliveryInterfaceButton() {
+    const dashboardContent = document.querySelector('.main-content');
+    dashboardContent.innerHTML = `
+        <h2>Welcome, Delivery Person!</h2>
+        <p>Click the button below to access your delivery interface:</p>
+        <button id="goToDeliveryInterfaceBtn" class="btn btn-primary">Go to Delivery Interface</button>
+    `;
+    document.getElementById('goToDeliveryInterfaceBtn').addEventListener('click', goToDeliveryInterface);
+}
 
-// Make functions available globally
+function goToDeliveryInterface() {
+    window.location.href = 'delivery-interface.html';
+}
+
+// Make sure these functions are available globally
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
 window.confirmStatusUpdate = confirmStatusUpdate;
@@ -1064,35 +1293,45 @@ window.openAddCategoryModal = openAddCategoryModal;
 window.openAddProductModal = openAddProductModal;
 window.closeModal = closeModal;
 window.goToDeliveryInterface = goToDeliveryInterface;
-
+window.openAddProductToSupermarketModal = openAddProductToSupermarketModal;
 window.editService = editService;
 window.deleteService = deleteService;
 window.openAddServiceModal = openAddServiceModal;
+window.viewSupermarketProducts = viewSupermarketProducts;
+window.editSupermarket = editSupermarket;
+window.deleteSupermarket = deleteSupermarket;
+window.openAddSupermarketModal = openAddSupermarketModal;
 
-
-
-// Export functions for potential use as a module
+// Export functions for use in other modules if needed
 export {
     loadDashboard,
     loadOrders,
-    loadCategories,
-    loadProducts,
+    loadInventory,
     loadUsers,
     loadAnalytics,
     loadSettings,
-    openAddCategoryModal,
-    openAddProductModal,
-    closeModal,
+    loadServices,
+    loadSupermarkets,
+    login,
+    logout,
+    showSection,
     viewOrderDetails,
     updateOrderStatus,
-    confirmStatusUpdate,
     deleteOrder,
     editProduct,
     deleteProduct,
     editUser,
     deleteUser,
-    loadServices,
     editService,
     deleteService,
-    openAddServiceModal
+    editSupermarket,
+    deleteSupermarket,
+    viewSupermarketProducts,
+    showModal,
+    closeModal,
+    openAddCategoryModal,
+    openAddProductModal,
+    openAddServiceModal,
+    openAddSupermarketModal,
+    openAddProductToSupermarketModal
 };
