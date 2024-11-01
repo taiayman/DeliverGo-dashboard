@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics.js';
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, limit, setDoc, getDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 
 const firebaseConfig = {
@@ -736,6 +736,287 @@ async function deleteProduct(productId) {
     }
 }
 
+async function loadTraditionalMarkets() {
+    const marketsGrid = document.getElementById('traditional-markets-grid');
+    marketsGrid.innerHTML = '';
+
+    // Add loading state
+    for (let i = 0; i < 6; i++) {
+        const shimmerCard = document.createElement('div');
+        shimmerCard.className = 'traditional-market-card loading';
+        shimmerCard.innerHTML = '<div class="shimmer-wrapper"><div class="shimmer"></div></div>';
+        marketsGrid.appendChild(shimmerCard);
+    }
+
+    try {
+        const marketsSnapshot = await getDocs(collection(db, 'traditional_markets'));
+        
+        marketsGrid.innerHTML = '';
+
+        marketsSnapshot.forEach(doc => {
+            const market = doc.data();
+            const marketCard = createTraditionalMarketCard(doc.id, market);
+            marketsGrid.appendChild(marketCard);
+        });
+    } catch (error) {
+        console.error('Error loading traditional markets:', error);
+        marketsGrid.innerHTML = '<p>Error loading markets</p>';
+    }
+}
+
+function createTraditionalMarketCard(id, market) {
+    const card = document.createElement('div');
+    card.className = 'traditional-market-card';
+    card.innerHTML = `
+        <div class="market-image-container">
+            <img src="${market.imageUrl}" alt="${market.name}" class="market-image">
+            <span class="market-status ${market.isOpen ? 'open' : 'closed'}">
+                ${market.isOpen ? 'Open' : 'Closed'}
+            </span>
+        </div>
+        <div class="market-content">
+            <div class="market-info">
+                <h3 class="market-name">${market.name}</h3>
+                <div class="market-details">
+                    <div class="market-address">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${market.location}</span>
+                    </div>
+                    <div class="market-stats">
+                        <div class="market-products">
+                            <i class="fas fa-shopping-basket"></i>
+                            <span>${market.specialties ? market.specialties.length : 0} specialties</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="market-description">${market.description || 'No description available'}</p>
+            </div>
+            <div class="market-actions">
+                <button onclick="openAddProductToMarketModal('${id}')" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Product
+                </button>
+                <button onclick="viewMarketProducts('${id}')" class="btn btn-secondary">
+                    <i class="fas fa-eye"></i> View Products
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a href="#" onclick="editTraditionalMarket('${id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="#" onclick="deleteTraditionalMarket('${id}')" class="text-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+async function addTraditionalMarket() {
+    const name = document.getElementById('marketName').value;
+    const location = document.getElementById('marketLocation').value;
+    const description = document.getElementById('marketDescription').value;
+    const imageUrl = document.getElementById('marketImageUrl').value;
+    const specialties = document.getElementById('marketSpecialties').value
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s);
+
+    try {
+        await addDoc(collection(db, 'traditional_markets'), {
+            name,
+            location,
+            description,
+            imageUrl,
+            specialties,
+            createdAt: new Date(),
+            isOpen: true
+        });
+
+        closeModal('addTraditionalMarketModal');
+        loadTraditionalMarkets();
+    } catch (error) {
+        console.error('Error adding traditional market:', error);
+        alert('Error adding traditional market');
+    }
+}
+
+async function addMarketProduct(marketId) {
+    const name = document.getElementById('productName').value;
+    const description = document.getElementById('productDescription').value;
+    const price = parseFloat(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQuantity').value);
+    const unit = document.getElementById('productUnit').value;
+    const imageUrl = document.getElementById('productImageUrl').value;
+
+    try {
+        await addDoc(collection(db, 'market_products'), {
+            name,
+            description,
+            price,
+            quantity,
+            unit,
+            imageUrl,
+            marketId,
+            type: 'traditional_market_product',
+            createdAt: new Date()
+        });
+
+        closeModal('addMarketProductModal');
+        viewMarketProducts(marketId);
+    } catch (error) {
+        console.error('Error adding market product:', error);
+        alert('Error adding market product');
+    }
+}
+
+async function viewMarketProducts(marketId) {
+    try {
+        const productsSnapshot = await getDocs(
+            query(
+                collection(db, 'market_products'),
+                where('marketId', '==', marketId),
+                where('type', '==', 'traditional_market_product')
+            )
+        );
+
+        const marketDoc = await getDoc(doc(db, 'traditional_markets', marketId));
+        const market = marketDoc.data();
+
+        const modalContent = `
+            <h2>${market.name} - Products</h2>
+            <div class="products-grid">
+                ${productsSnapshot.empty ? '<p>No products available</p>' : 
+                    productsSnapshot.docs.map(doc => {
+                        const product = doc.data();
+                        return `
+                            <div class="product-card">
+                                <img src="${product.imageUrl || '/api/placeholder/400/300'}" alt="${product.name}" class="product-image">
+                                <h4 class="product-name">${product.name}</h4>
+                                <p class="product-price">$${product.price.toFixed(2)}</p>
+                                <p class="product-quantity">${product.quantity} ${product.unit}</p>
+                                <div class="product-actions">
+                                    <button onclick="editMarketProduct('${doc.id}')" class="btn btn-secondary btn-sm">Edit</button>
+                                    <button onclick="deleteMarketProduct('${doc.id}')" class="btn btn-danger btn-sm">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                }
+            </div>
+            <div class="modal-actions">
+                <button onclick="openAddProductToMarketModal('${marketId}')" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Product
+                </button>
+            </div>
+        `;
+
+        showModal(modalContent, 'marketProductsModal');
+    } catch (error) {
+        console.error('Error loading market products:', error);
+        alert('Error loading market products');
+    }
+}
+
+function openAddProductToMarketModal(marketId) {
+    const modalContent = `
+        <h2>Add Product to Market</h2>
+        <form id="addMarketProductForm">
+            <div class="form-group">
+                <label for="productName">Product Name</label>
+                <input type="text" id="productName" required>
+            </div>
+            <div class="form-group">
+                <label for="productDescription">Description</label>
+                <textarea id="productDescription"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="productPrice">Price</label>
+                <input type="number" id="productPrice" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="productQuantity">Quantity</label>
+                <input type="number" id="productQuantity" required>
+            </div>
+            <div class="form-group">
+                <label for="productUnit">Unit</label>
+                <input type="text" id="productUnit" required>
+            </div>
+            <div class="form-group">
+                <label for="productImageUrl">Image URL</label>
+                <input type="url" id="productImageUrl" required>
+                <img id="imagePreview" src="/api/placeholder/400/300" alt="Preview">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Product</button>
+        </form>
+    `;
+    
+    showModal(modalContent);
+    
+    // Add form submit handler
+    document.getElementById('addMarketProductForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newProduct = {
+            name: document.getElementById('productName').value,
+            description: document.getElementById('productDescription').value,
+            price: parseFloat(document.getElementById('productPrice').value),
+            quantity: parseInt(document.getElementById('productQuantity').value),
+            unit: document.getElementById('productUnit').value,
+            imageUrl: document.getElementById('productImageUrl').value,
+            marketId: marketId,
+            type: 'traditional_market_product',
+            createdAt: new Date()
+        };
+        
+        try {
+            await addDoc(collection(db, 'market_products'), newProduct);
+            closeModal();
+            viewMarketProducts(marketId);
+        } catch (error) {
+            console.error('Error adding product:', error);
+            alert('Error adding product');
+        }
+    });
+
+    // Add image preview handler
+    document.getElementById('productImageUrl').addEventListener('input', (e) => {
+        document.getElementById('imagePreview').src = e.target.value || '/api/placeholder/400/300';
+    });
+}
+
+async function deleteTraditionalMarket(marketId) {
+    if (confirm('Are you sure you want to delete this market? This will also delete all associated products.')) {
+        try {
+            // Delete the market
+            await deleteDoc(doc(db, 'traditional_markets', marketId));
+            
+            // Delete all associated products
+            const productsSnapshot = await getDocs(
+                query(
+                    collection(db, 'market_products'),
+                    where('marketId', '==', marketId)
+                )
+            );
+            
+            const batch = writeBatch(db);
+            productsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            
+            loadTraditionalMarkets();
+        } catch (error) {
+            console.error('Error deleting traditional market:', error);
+            alert('Error deleting market');
+        }
+    }
+};
+
 async function editUser(userId) {
     try {
         const userDoc = await getDoc(doc(db, 'users', userId));
@@ -934,6 +1215,7 @@ async function deleteSupermarket(supermarketId) {
     }
 }
 
+
 async function viewSupermarketProducts(supermarketId) {
     try {
         const productsSnapshot = await getDocs(query(collection(db, 'products'), where('supermarketId', '==', supermarketId)));
@@ -1029,6 +1311,45 @@ function openAddSupermarketModal() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded');
     checkAuth();
+
+    // Move addMarketBtn declaration and event listener inside DOMContentLoaded
+    const addMarketBtn = document.getElementById('add-market-btn');
+    if (addMarketBtn) {
+        addMarketBtn.addEventListener('click', openAddMarketModal);
+    }
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const section = item.getAttribute('data-section');
+            if (section === 'traditional-markets') {
+                loadTraditionalMarkets();
+            }
+        });
+    });
+
+    // Image preview handlers
+    document.getElementById('marketImageUrl')?.addEventListener('input', (e) => {
+        document.getElementById('imagePreview').src = e.target.value || '/api/placeholder/400/300';
+    });
+
+    document.getElementById('productImageUrl')?.addEventListener('input', (e) => {
+        document.getElementById('productImagePreview').src = e.target.value || '/api/placeholder/400/300';
+    });
+
+    // Market search handler
+    document.getElementById('market-search')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('.traditional-market-card').forEach(card => {
+            const marketName = card.querySelector('.market-name').textContent.toLowerCase();
+            const marketLocation = card.querySelector('.market-address span').textContent.toLowerCase();
+            if (marketName.includes(searchTerm) || marketLocation.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
 
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -1164,6 +1485,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    if (addMarketBtn) {
+        addMarketBtn.addEventListener('click', openAddMarketModal);
+    }
+
     document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -1235,7 +1560,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
-    }
+    }    
+
+    // Add section handler for traditional markets
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const section = item.getAttribute('data-section');
+            if (section === 'traditional-markets') {
+                loadTraditionalMarkets();
+            }
+        });
+    });
 });
 
 function generateProductUrl(productName) {
@@ -1280,6 +1615,104 @@ function goToDeliveryInterface() {
     window.location.href = 'delivery-interface.html';
 }
 
+function openAddMarketModal() {
+    const modalContent = `
+        <h2>Add Traditional Market</h2>
+        <form id="addTraditionalMarketForm">
+            <div class="form-group">
+                <label for="marketName">Market Name</label>
+                <input type="text" id="marketName" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="marketLocation">Location</label>
+                <input type="text" id="marketLocation" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="marketDescription">Description</label>
+                <textarea id="marketDescription" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="marketImageUrl">Image URL</label>
+                <input type="url" id="marketImageUrl" class="form-control" required>
+                <div class="image-preview mt-2">
+                    <img id="marketImagePreview" src="/api/placeholder/400/300" alt="Market Preview" class="img-fluid">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="marketStatus" checked>
+                    Market is Open
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="marketSpecialties">Specialties (comma-separated)</label>
+                <input type="text" id="marketSpecialties" class="form-control" placeholder="e.g., Fresh Produce, Seafood, Spices">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Market</button>
+        </form>
+    `;
+    
+    showModal(modalContent);
+    
+    // Set up form submission handler
+    const form = document.getElementById('addTraditionalMarketForm');
+    form.addEventListener('submit', handleMarketFormSubmit);
+    
+    // Set up image preview
+    const imageUrlInput = document.getElementById('marketImageUrl');
+    imageUrlInput.addEventListener('input', (e) => {
+        const preview = document.getElementById('marketImagePreview');
+        preview.src = e.target.value || '/api/placeholder/400/300';
+    });
+}
+
+// Add the form submission handler
+async function handleMarketFormSubmit(e) {
+    e.preventDefault();
+    
+    try {
+        const marketData = {
+            name: document.getElementById('marketName').value,
+            location: document.getElementById('marketLocation').value,
+            description: document.getElementById('marketDescription').value,
+            imageUrl: document.getElementById('marketImageUrl').value,
+            isOpen: document.getElementById('marketStatus').checked,
+            specialties: document.getElementById('marketSpecialties').value
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s),
+            createdAt: new Date()
+        };
+
+        // Add to Firestore
+        await addDoc(collection(db, 'traditional_markets'), marketData);
+        
+        // Close modal and reload markets
+        closeModal();
+        loadTraditionalMarkets();
+        
+        // Show success message
+        showNotification('Market added successfully!', 'success');
+    } catch (error) {
+        console.error('Error adding market:', error);
+        showNotification('Error adding market. Please try again.', 'error');
+    }
+}
+
+// Add notification helper
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+
+
 // Make sure these functions are available globally
 window.viewOrderDetails = viewOrderDetails;
 window.updateOrderStatus = updateOrderStatus;
@@ -1301,10 +1734,18 @@ window.viewSupermarketProducts = viewSupermarketProducts;
 window.editSupermarket = editSupermarket;
 window.deleteSupermarket = deleteSupermarket;
 window.openAddSupermarketModal = openAddSupermarketModal;
+window.openAddProductToMarketModal = openAddProductToMarketModal;
+window.openAddMarketModal = openAddMarketModal;
+window.handleMarketFormSubmit = handleMarketFormSubmit;
+
+
 
 // Export functions for use in other modules if needed
 export {
     loadDashboard,
+    openAddMarketModal,
+    handleMarketFormSubmit,
+    openAddProductToMarketModal,
     loadOrders,
     loadInventory,
     loadUsers,
@@ -1334,4 +1775,246 @@ export {
     openAddServiceModal,
     openAddSupermarketModal,
     openAddProductToSupermarketModal
+};
+
+// Add these functions to the global scope
+window.addTraditionalMarket = async function() {
+    const name = document.getElementById('marketName').value;
+    const location = document.getElementById('marketLocation').value;
+    const description = document.getElementById('marketDescription').value;
+    const imageUrl = document.getElementById('marketImageUrl').value;
+    const isOpen = document.getElementById('marketStatus').checked;
+
+    try {
+        await addDoc(collection(db, 'traditional_markets'), {
+            name,
+            location,
+            description,
+            imageUrl,
+            isOpen,
+            createdAt: new Date()
+        });
+
+        closeModal();
+        loadTraditionalMarkets();
+    } catch (error) {
+        console.error('Error adding traditional market:', error);
+        alert('Error adding traditional market');
+    }
+};
+
+window.editTraditionalMarket = async function(marketId) {
+    try {
+        const marketDoc = await getDoc(doc(db, 'traditional_markets', marketId));
+        const marketData = marketDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Traditional Market</h2>
+            <form id="editMarketForm">
+                <div class="form-group">
+                    <label for="editMarketName">Market Name</label>
+                    <input type="text" id="editMarketName" value="${marketData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketLocation">Location</label>
+                    <input type="text" id="editMarketLocation" value="${marketData.location}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketDescription">Description</label>
+                    <textarea id="editMarketDescription">${marketData.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketImageUrl">Image URL</label>
+                    <input type="url" id="editMarketImageUrl" value="${marketData.imageUrl}" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="editMarketStatus" ${marketData.isOpen ? 'checked' : ''}>
+                        Market is Open
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Market</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        document.getElementById('editMarketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedMarket = {
+                name: document.getElementById('editMarketName').value,
+                location: document.getElementById('editMarketLocation').value,
+                description: document.getElementById('editMarketDescription').value,
+                imageUrl: document.getElementById('editMarketImageUrl').value,
+                isOpen: document.getElementById('editMarketStatus').checked
+            };
+            try {
+                await updateDoc(doc(db, 'traditional_markets', marketId), updatedMarket);
+                closeModal();
+                loadTraditionalMarkets();
+            } catch (error) {
+                console.error('Error updating market:', error);
+                alert('Error updating market');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading market details:', error);
+        alert('Error loading market details');
+    }
+};
+
+window.deleteTraditionalMarket = async function(marketId) {
+    if (confirm('Are you sure you want to delete this market? This will also delete all associated products.')) {
+        try {
+            // Delete the market
+            await deleteDoc(doc(db, 'traditional_markets', marketId));
+            
+            // Delete all associated products
+            const productsSnapshot = await getDocs(
+                query(
+                    collection(db, 'market_products'),
+                    where('marketId', '==', marketId)
+                )
+            );
+            
+            const batch = writeBatch(db);
+            productsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            
+            loadTraditionalMarkets();
+        } catch (error) {
+            console.error('Error deleting traditional market:', error);
+            alert('Error deleting market');
+        }
+    }
+};
+
+window.viewMarketProducts = async function(marketId) {
+    try {
+        const productsSnapshot = await getDocs(
+            query(
+                collection(db, 'market_products'),
+                where('marketId', '==', marketId),
+                where('type', '==', 'traditional_market_product')
+            )
+        );
+
+        const marketDoc = await getDoc(doc(db, 'traditional_markets', marketId));
+        const market = marketDoc.data();
+
+        const modalContent = `
+            <h2>${market.name} - Products</h2>
+            <div class="products-grid">
+                ${productsSnapshot.empty ? '<p>No products available</p>' : 
+                    productsSnapshot.docs.map(doc => {
+                        const product = doc.data();
+                        return `
+                            <div class="product-card">
+                                <img src="${product.imageUrl || '/api/placeholder/400/300'}" alt="${product.name}" class="product-image">
+                                <h4 class="product-name">${product.name}</h4>
+                                <p class="product-price">$${product.price.toFixed(2)}</p>
+                                <p class="product-quantity">${product.quantity} ${product.unit}</p>
+                                <div class="product-actions">
+                                    <button onclick="editMarketProduct('${doc.id}')" class="btn btn-secondary btn-sm">Edit</button>
+                                    <button onclick="deleteMarketProduct('${doc.id}')" class="btn btn-danger btn-sm">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                }
+            </div>
+            <div class="modal-actions">
+                <button onclick="openAddProductToMarketModal('${marketId}')" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Product
+                </button>
+            </div>
+        `;
+
+        showModal(modalContent, 'marketProductsModal');
+    } catch (error) {
+        console.error('Error loading market products:', error);
+        alert('Error loading market products');
+    }
+};
+
+window.editMarketProduct = async function(productId) {
+    try {
+        const productDoc = await getDoc(doc(db, 'market_products', productId));
+        const productData = productDoc.data();
+        
+        const modalContent = `
+            <h2>Edit Market Product</h2>
+            <form id="editMarketProductForm">
+                <div class="form-group">
+                    <label for="editMarketProductName">Product Name</label>
+                    <input type="text" id="editMarketProductName" value="${productData.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketProductDescription">Description</label>
+                    <textarea id="editMarketProductDescription" rows="3">${productData.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketProductPrice">Price</label>
+                    <input type="number" id="editMarketProductPrice" value="${productData.price}" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketProductQuantity">Quantity</label>
+                    <input type="number" id="editMarketProductQuantity" value="${productData.quantity}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketProductUnit">Unit</label>
+                    <input type="text" id="editMarketProductUnit" value="${productData.unit}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editMarketProductImageUrl">Image URL</label>
+                    <input type="url" id="editMarketProductImageUrl" value="${productData.imageUrl}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Product</button>
+            </form>
+        `;
+        
+        showModal(modalContent);
+        
+        document.getElementById('editMarketProductForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedProduct = {
+                name: document.getElementById('editMarketProductName').value,
+                description: document.getElementById('editMarketProductDescription').value,
+                price: parseFloat(document.getElementById('editMarketProductPrice').value),
+                quantity: parseInt(document.getElementById('editMarketProductQuantity').value),
+                unit: document.getElementById('editMarketProductUnit').value,
+                imageUrl: document.getElementById('editMarketProductImageUrl').value,
+                marketId: productData.marketId,
+                type: 'traditional_market_product',
+                createdAt: productData.createdAt
+            };
+            try {
+                await updateDoc(doc(db, 'market_products', productId), updatedProduct);
+                closeModal();
+                viewMarketProducts(productData.marketId);
+            } catch (error) {
+                console.error('Error updating product:', error);
+                alert('Error updating product');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading product details:', error);
+        alert('Error loading product details');
+    }
+};
+
+window.deleteMarketProduct = async function(productId) {
+    if (confirm('Are you sure you want to delete this product?')) {
+        try {
+            const productDoc = await getDoc(doc(db, 'market_products', productId));
+            const productData = productDoc.data();
+            await deleteDoc(doc(db, 'market_products', productId));
+            viewMarketProducts(productData.marketId);
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            alert('Error deleting product');
+        }
+    }
 };
