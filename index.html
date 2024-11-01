@@ -29,12 +29,13 @@
             <ul class="sidebar-nav">
                 <li><a href="#" class="nav-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a></li>
                 <li><a href="#" class="nav-item" data-section="orders"><i class="fas fa-shopping-cart"></i> <span>Orders</span></a></li>
-                <li><a href="#" class="nav-item" data-section="inventory"><i class="fas fa-box"></i> <span>Traditional Market</span></a></li>
+                <li><a href="#" class="nav-item" data-section="inventory"><i class="fas fa-box"></i> <span>inventory</span></a></li>
                 <li><a href="#" class="nav-item" data-section="users"><i class="fas fa-users"></i> <span>Users</span></a></li>
                 <li><a href="#" class="nav-item" data-section="analytics"><i class="fas fa-chart-bar"></i> <span>Analytics</span></a></li>
                 <li><a href="#" class="nav-item" data-section="settings"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
                 <li><a href="#" class="nav-item" data-section="services"><i class="fas fa-concierge-bell"></i> <span>Services</span></a></li>
                 <li><a href="#" class="nav-item" data-section="supermarkets"><i class="fas fa-store"></i> <span>Supermarkets</span></a></li>
+                <li><a href="#" class="nav-item" data-section="traditional-markets"><i class="fas fa-store-alt"></i> <span>Traditional Markets</span></a></li>
             </ul>
         </nav>
 
@@ -189,6 +190,17 @@
                         <div id="supermarkets-grid" class="supermarkets-grid"></div>
                     </div>
                 </section>
+
+                <section id="traditional-markets-section" class="section traditional-markets" style="display: none;">
+                    <h2 class="section-title">Traditional Markets Management</h2>
+                    <div class="traditional-markets-container">
+                        <div class="traditional-markets-header">
+                            <input type="text" id="market-search" placeholder="Search markets">
+                            <button id="add-market-btn" class="btn btn-primary">Add Traditional Market</button>
+                        </div>
+                        <div id="traditional-markets-grid" class="traditional-markets-grid"></div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -308,6 +320,39 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('addSupermarketModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Supermarket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addTraditionalMarketModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add New Traditional Market</h2>
+            <form id="addTraditionalMarketForm">
+                <div class="form-group">
+                    <label for="marketName">Market Name</label>
+                    <input type="text" id="marketName" name="marketName" required>
+                </div>
+                <div class="form-group">
+                    <label for="marketLocation">Location</label>
+                    <input type="text" id="marketLocation" name="marketLocation" required>
+                </div>
+                <div class="form-group">
+                    <label for="marketDescription">Description</label>
+                    <textarea id="marketDescription" name="marketDescription"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="marketImageUrl">Image URL</label>
+                    <input type="url" id="marketImageUrl" name="marketImageUrl" required>
+                </div>
+                <div class="form-group">
+                    <label for="marketSpecialties">Specialties</label>
+                    <input type="text" id="marketSpecialties" name="marketSpecialties" placeholder="Enter specialties separated by commas">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTraditionalMarketModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Market</button>
                 </div>
             </form>
         </div>
